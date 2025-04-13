@@ -91,9 +91,6 @@ int gyroscope (void)
     I2C2->TIMINGR |= (1 << 22);
     I2C2->TIMINGR &= ~((1 << 23) | (3 << 20));
 
-    // if(I2C2->TIMINGR == 0x10420f13)
-    //     My_GPIO_TogglePin(GPIOC, GPIO_PIN_7);
-
     // Enable the I2C peripheral using the PE bit in the CR1 register
     I2C2->CR1 |= 1;
 
@@ -175,40 +172,75 @@ int gyroscope (void)
     {}
 
     // Set up the global x and y.
-    int16_t x = 0;
-    int16_t y = 0;
-    int xWasPos = 1;
-    int yWasPos = 1;
+    int x = 0;
+    int y = 0;
+    int xleftovers = 0;
+    int yleftovers = 0;
 
     while(1)
     {
         // Read the four registers of x and y from the gyroscope.
-        int8_t xh = read(0x29);
-        int8_t xl = read(0x28);
-        int8_t yh = read(0x2b);
-        int8_t yl = read(0x2a);
+        uint8_t xh = read(0x29);
+        uint8_t xl = read(0x28);
+        uint8_t yh = read(0x2b);
+        uint8_t yl = read(0x2a);
 
         // Update the global x and y based on the read values.
-        x += (xh << 8) | xl;
-        y += (yh << 8) | yl;
+        (xh | 0x80) << 56;
+        (xh | 0x7f) << 8;
+        volatile int16_t xGyro = (xh << 8) | xl;
+        volatile int16_t yGyro = (yh << 8) | yl;
+        if(xGyro > -200 && xGyro < 200)
+            xGyro = 0;
+        if(yGyro > -200 && yGyro < 200)
+            yGyro = 0;
 
+        int xGyroAndLeftovers = xGyro + xleftovers;
+        int yGyroAndLeftovers = yGyro + yleftovers;
+
+        xleftovers = xGyroAndLeftovers % 5000;
+        yleftovers = yGyroAndLeftovers % 5000;
+
+        int xReduced = xGyroAndLeftovers / 5000;
+        int yReduced = yGyroAndLeftovers / 5000;
+        x += xReduced;
+        y += yReduced;
 
         // Update the LEDs based on the new x and y.
-        if((xWasPos && x < 0) || (!xWasPos && x >= 0))
+        if(x >= 500)
         {
-            My_GPIO_TogglePin(GPIOC, GPIO_PIN_8);
-            My_GPIO_TogglePin(GPIOC, GPIO_PIN_9);
-            xWasPos = !xWasPos;
+            My_GPIO_WritePin(GPIOC, GPIO_PIN_9, 1);
+            My_GPIO_WritePin(GPIOC, GPIO_PIN_8, 0);
         }
-        if((yWasPos && y < 0) || (!yWasPos && y >= 0))
+        else if(x < 500 && x > -500)
         {
-            My_GPIO_TogglePin(GPIOC, GPIO_PIN_6);
-            My_GPIO_TogglePin(GPIOC, GPIO_PIN_7);
-            yWasPos = !yWasPos;
+            My_GPIO_WritePin(GPIOC, GPIO_PIN_9, 0);
+            My_GPIO_WritePin(GPIOC, GPIO_PIN_8, 0);
+        }
+        else
+        {
+            My_GPIO_WritePin(GPIOC, GPIO_PIN_8, 1);
+            My_GPIO_WritePin(GPIOC, GPIO_PIN_9, 0);
+        }
+
+        if(y >= 500)
+        {
+            My_GPIO_WritePin(GPIOC, GPIO_PIN_6, 1);
+            My_GPIO_WritePin(GPIOC, GPIO_PIN_7, 0);
+        }
+        else if(y < 500 && y > -500)
+        {
+            My_GPIO_WritePin(GPIOC, GPIO_PIN_7, 0);
+            My_GPIO_WritePin(GPIOC, GPIO_PIN_6, 0);
+        }
+        else
+        {
+            My_GPIO_WritePin(GPIOC, GPIO_PIN_7, 1);
+            My_GPIO_WritePin(GPIOC, GPIO_PIN_6, 0);
         }
 
         // Wait 100 ms
-        HAL_Delay(100);
+        // HAL_Delay(10);
     }
 }
 
