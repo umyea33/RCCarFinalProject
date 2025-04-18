@@ -1,4 +1,4 @@
-// TARGET ?= LAB1
+TARGET ?= RECEIVER
 
 PREFIX = arm-none-eabi-
 CC = $(PREFIX)gcc
