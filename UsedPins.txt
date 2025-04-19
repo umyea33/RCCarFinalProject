@@ -1,0 +1,5 @@
+Pins Needed
+Gyroscope: PB11, PB13, PB15
+Motor: PA2, PA3, PA4, PA5, PA6
+Transceiver: PB3, PB4, PB5, PB6, PB7, PB8
+Ultrasonic Sensor: PA0, PA1

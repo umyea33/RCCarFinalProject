@@ -3,10 +3,6 @@
 #include <main.h>
 int gyroscope (void) 
 {
-    SystemClock_Config(); //Configure the system clock
-
-    My_RCC_GPIOC_CLK_ENABLE(); // Enable the GPIOC clock in the RCC
-
     // Set up a configuration struct to pass to the initialization function
     GPIO_InitTypeDef initStr = {GPIO_PIN_6 | GPIO_PIN_7 | GPIO_PIN_8 | GPIO_PIN_9,
     GPIO_MODE_OUTPUT_PP,
