@@ -10,6 +10,39 @@
 #include "nrf24l01p.h"
 #include <stm32f0xx_hal.h>
 
+void setupSPI()
+{
+    GPIO_InitTypeDef initBRxIRQandCE = 
+    {
+        GPIO_PIN_6 | GPIO_PIN_7, GPIO_PIN_8,
+        GPIO_MODE_OUTPUT_PP,
+        GPIO_SPEED_FREQ_HIGH,
+        GPIO_NOPULL
+    };
+
+    GPIO_InitTypeDef initBTransceiverAF = 
+    {
+        GPIO_PIN_3 | GPIO_PIN_4 | GPIO_PIN_5,
+        GPIO_MODE_AF_PP,
+        GPIO_SPEED_FREQ_HIGH,
+        GPIO_NOPULL
+    };
+
+    HAL_GPIO_Init(GPIOB, &initBRxIRQandCE);
+    HAL_GPIO_Init(GPIOB, &initBTransceiverAF);
+
+    GPIOB->AFR[0] &= ~(0xFFFFFF00);
+    GPIOB->AFR[1] &= ~(0xF);
+
+    // Enable spi1
+    RCC->APB2ENR |= RCC_APB2ENR_SPI1EN;
+
+    // SPI1 setup: master, BR=Fclk/16, CPOL=0, CPHA=0, 8-bit
+    SPI1->CR1 = SPI_CR1_MSTR | SPI_CR1_BR_1 | SPI_CR1_SSI | SPI_CR1_SSM;
+    SPI1->CR1 |= SPI_CR1_SPE;
+
+}
+
 static void cs_high()
 {
     HAL_GPIO_WritePin(NRF24L01P_SPI_CS_PIN_PORT, NRF24L01P_SPI_CS_PIN_NUMBER, GPIO_PIN_SET);

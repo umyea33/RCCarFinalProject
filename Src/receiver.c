@@ -14,8 +14,6 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 
 }
 
-
-
 int receiver(void)
 {
     HAL_Init(); // Reset all peripherals
@@ -25,42 +23,17 @@ int receiver(void)
 
     GPIO_InitTypeDef initStrC = 
     {
-        GPIO_PIN_6 | GPIO_PIN_7 | GPIO_PIN_8 | GPIO_PIN_9 | GPIO_PIN_13,
+        GPIO_PIN_6 | GPIO_PIN_7 | GPIO_PIN_8 | GPIO_PIN_9,
         GPIO_MODE_OUTPUT_PP,
         GPIO_SPEED_FREQ_LOW,
         GPIO_NOPULL
     };
 
-    GPIO_InitTypeDef initBRxIRQandCE = 
-    {
-        GPIO_PIN_6 | GPIO_PIN_7,
-        GPIO_MODE_OUTPUT_PP,
-        GPIO_SPEED_FREQ_HIGH,
-        GPIO_NOPULL
-    };
-
-    GPIO_InitTypeDef initBTransceiverAF = 
-    {
-        GPIO_PIN_3 | GPIO_PIN_4 | GPIO_PIN_5,
-        GPIO_MODE_AF_PP,
-        GPIO_SPEED_FREQ_HIGH,
-        GPIO_NOPULL
-    };
-
     HAL_GPIO_Init(GPIOC, &initStrC);
-    HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, 1);
 
-    HAL_GPIO_Init(GPIOB, &initBRxIRQandCE);
-    HAL_GPIO_Init(GPIOB, &initBTransceiverAF);
-
-    HAL_GPIO_WritePin(GPIOC, GPIO_PIN_8, GPIO_PIN_SET);
-
-    GPIOB->AFR[0] &= ~(0xFFFFFF00);
-    GPIOB->AFR[1] &= ~(0xF);
+    setupSPI();
 
     nrf24l01p_rx_init(2500, _1Mbps);
-
-    HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, 1);
 
     while(1)
     {
@@ -77,13 +50,4 @@ int receiver(void)
         }
     }
     return 1;
-}
-
-void setupSPI()
-{
-    // Enable spi1
-    RCC->APB2ENR |= (1 << 12);
-    SPI1->CR1 |= (1 << 6);
-
-
 }

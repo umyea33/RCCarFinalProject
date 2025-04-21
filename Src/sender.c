@@ -25,34 +25,10 @@ int sender(void)
         GPIO_NOPULL
     };
 
-    GPIO_InitTypeDef initBRxIRQandCE = 
-    {
-        GPIO_PIN_6 | GPIO_PIN_7,
-        GPIO_MODE_OUTPUT_PP,
-        GPIO_SPEED_FREQ_HIGH,
-        GPIO_NOPULL
-    };
-
-    GPIO_InitTypeDef initBTransceiverAF = 
-    {
-        GPIO_PIN_3 | GPIO_PIN_4 | GPIO_PIN_5,
-        GPIO_MODE_AF_PP,
-        GPIO_SPEED_FREQ_HIGH,
-        GPIO_NOPULL
-    };
 
     HAL_GPIO_Init(GPIOC, &initStrC);
-    HAL_GPIO_Init(GPIOB, &initBRxIRQandCE);
-    HAL_GPIO_Init(GPIOB, &initBTransceiverAF);
 
-    // Set up the SPI stuff
-    RCC->APB2ENR |= (1 << 12);
-    SPI1->CR1 |= (1 << 6);
-
-    HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_8);
-
-    GPIOB->AFR[0] &= ~(0xFFFFFF00);
-    GPIOB->AFR[1] &= ~(0xF);
+    setupSPI();
 
     nrf24l01p_tx_init(2500, _1Mbps);
 

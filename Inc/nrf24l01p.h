@@ -53,6 +53,7 @@ typedef enum
     _18dBm = 0
 } output_power;
 
+void setupSPI();
 
 /* Main Functions */
 void nrf24l01p_rx_init(channel MHz, air_data_rate bps);
