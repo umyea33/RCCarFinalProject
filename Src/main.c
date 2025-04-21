@@ -5,6 +5,6 @@
 
 int main(void)
 {
-    receiver();
-    //sender();
+    //receiver();
+    sender();
 }

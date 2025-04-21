@@ -38,9 +38,24 @@ void setupSPI()
     RCC->APB2ENR |= RCC_APB2ENR_SPI1EN;
 
     // SPI1 setup: master, BR=Fclk/16, CPOL=0, CPHA=0, 8-bit
-    SPI1->CR1 = SPI_CR1_MSTR | SPI_CR1_BR_1 | SPI_CR1_SSI | SPI_CR1_SSM;
+    SPI1->CR1 = SPI_CR1_MSTR | SPI_CR1_BR_1;
+    SPI1->CR2 = SPI_CR2_TXDMAEN | SPI_CR2_RXDMAEN | SPI_CR2_SSOE | SPI_CR2_RXNEIE 
+                | SPI_CR2_FRXTH | SPI_CR2_DS_2 | SPI_CR2_DS_1 | SPI_CR2_DS_0;
     SPI1->CR1 |= SPI_CR1_SPE;
+}
 
+void irq_pin_init(void)
+{
+    GPIO_InitTypeDef GPIO_InitStruct = {0};
+    __HAL_RCC_GPIOB_CLK_ENABLE();
+
+    GPIO_InitStruct.Pin = NRF24L01P_IRQ_PIN_NUMBER;
+    GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING; // IRQ is active LOW
+    GPIO_InitStruct.Pull = GPIO_NOPULL;
+    HAL_GPIO_Init(NRF24L01P_IRQ_PIN_PORT, &GPIO_InitStruct);
+
+    HAL_NVIC_SetPriority(EXTI4_15_IRQn, 1, 0);
+    HAL_NVIC_EnableIRQ(EXTI4_15_IRQn);
 }
 
 static void cs_high()

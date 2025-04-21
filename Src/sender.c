@@ -6,9 +6,6 @@
 // data array to be sent
 uint8_t txData[NRF24L01P_PAYLOAD_LENGTH] = {0, 0, 0, 0};
 
-// for rx interrupt
-void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin);
-
 int sender(void)
 {
     HAL_Init(); // Reset all peripherals
@@ -29,18 +26,21 @@ int sender(void)
     HAL_GPIO_Init(GPIOC, &initStrC);
 
     setupSPI();
+    irq_pin_init();
 
-    nrf24l01p_tx_init(2500, _1Mbps);
+    nrf24l01p_tx_init(2402, _1Mbps);
 
     while (1)
     {
         // change tx datas
         for(int i = 0; i < NRF24L01P_PAYLOAD_LENGTH; i++)
-            txData[i] = i + 1;
+            txData[i] = 3;
 
         // transmit
         nrf24l01p_tx_transmit(txData);
         HAL_Delay(1000);
+        nrf24l01p_tx_irq(); // Check status and clear IRQ
+        
         HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_7);
     }
     //gyroscope();

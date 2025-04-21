@@ -17,7 +17,7 @@
 
 
 /* User Configurations */
-#define NRF24L01P_SPI                     (&hspi2)
+#define NRF24L01P_SPI                     (&hspi1)
 
 #define NRF24L01P_SPI_CS_PIN_PORT         GPIOB
 #define NRF24L01P_SPI_CS_PIN_NUMBER       GPIO_PIN_6
@@ -54,6 +54,7 @@ typedef enum
 } output_power;
 
 void setupSPI();
+void irq_pin_init(void);
 
 /* Main Functions */
 void nrf24l01p_rx_init(channel MHz, air_data_rate bps);
