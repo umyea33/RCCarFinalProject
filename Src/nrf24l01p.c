@@ -78,7 +78,7 @@ static void ce_low()
     HAL_GPIO_WritePin(NRF24L01P_CE_PIN_PORT, NRF24L01P_CE_PIN_NUMBER, GPIO_PIN_RESET);
 }
 
-static uint8_t read_register(uint8_t reg)
+uint8_t read_register(uint8_t reg)
 {
     uint8_t command = NRF24L01P_CMD_R_REGISTER | reg;
     uint8_t status;
