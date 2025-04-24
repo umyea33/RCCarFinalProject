@@ -3,10 +3,12 @@
 #include <main.h>
 #include <nrf24l01p.h>
 
-uint8_t txData[NRF24L01P_PAYLOAD_LENGTH] = "worl";
+uint8_t txData[NRF24L01P_PAYLOAD_LENGTH] = {0, 0, 0, 0};
 
 int gyroscope (void) 
 {
+    gyroInit();
+
     // Set up the global x and y.
     int x = 0;
     int y = 0;
@@ -50,6 +52,7 @@ int gyroscope (void)
         // Update the LEDs based on the new x and y.
         if(x >= 500)
         {
+            txData[2] = 1;
             My_GPIO_WritePin(GPIOC, GPIO_PIN_9, 1);
             My_GPIO_WritePin(GPIOC, GPIO_PIN_8, 0);
             
@@ -61,12 +64,14 @@ int gyroscope (void)
         }
         else
         {
+            txData[0] = 1;
             My_GPIO_WritePin(GPIOC, GPIO_PIN_8, 1);
             My_GPIO_WritePin(GPIOC, GPIO_PIN_9, 0);
         }
 
         if(y >= 500)
         {
+            txData[1] = 1;
             My_GPIO_WritePin(GPIOC, GPIO_PIN_6, 1);
             My_GPIO_WritePin(GPIOC, GPIO_PIN_7, 0);
         }
@@ -77,19 +82,13 @@ int gyroscope (void)
         }
         else
         {
+            txData[3] = 1;
             My_GPIO_WritePin(GPIOC, GPIO_PIN_7, 1);
             My_GPIO_WritePin(GPIOC, GPIO_PIN_6, 0);
         }
 
         if(transmitData(txData) == 1)
-        {
-            HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_9);
             HAL_Delay(1400);
-        }
-        else
-        {
-            HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_8); 
-        }
 
         // Wait 100 ms
         // HAL_Delay(10);
@@ -177,8 +176,8 @@ int8_t read(char reg)
 
 void gyroInit(void)
 {
-// Set up a configuration struct to pass to the initialization function
-GPIO_InitTypeDef initStr = {GPIO_PIN_6 | GPIO_PIN_7 | GPIO_PIN_8 | GPIO_PIN_9,
+    // Set up a configuration struct to pass to the initialization function
+    GPIO_InitTypeDef initStr = {GPIO_PIN_6 | GPIO_PIN_7 | GPIO_PIN_8 | GPIO_PIN_9,
     GPIO_MODE_OUTPUT_PP,
     GPIO_SPEED_FREQ_LOW,
     GPIO_NOPULL};

@@ -2,7 +2,7 @@
 #include <stm32f0xx_hal.h>
 #include <nrf24l01p.h>
 
-uint8_t sendData[NRF24L01P_PAYLOAD_LENGTH] = "worl";
+//uint8_t sendData[NRF24L01P_PAYLOAD_LENGTH] = "worl";
 
 // data array to be sent
 uint8_t txAddress[] = {0xEE, 0xEE, 0xEE, 0xEE, 0xEE};
@@ -30,18 +30,18 @@ int sender(void)
     nrf24Init();
     nrf24TxMode(txAddress, 10);
 
-    while(1)
-    {
-        if(transmitData(sendData) == 1)
-        {
-            HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_9);
-            HAL_Delay(1400);
-        }
-        else
-        {
-            HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_8); 
-        }
-    }
-    //gyroscope();
+    // while(1)
+    // {
+    //     if(transmitData(sendData) == 1)
+    //     {
+    //         HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_9);
+    //         HAL_Delay(1400);
+    //     }
+    //     else
+    //     {
+    //         HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_8); 
+    //     }
+    // }
+    gyroscope();
     return 1;
 }

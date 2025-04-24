@@ -39,22 +39,22 @@ void SetRPM(uint8_t duty) {
 
 void setDirection(uint8_t* data)
 {
-    if(data[0] == 1)
+    if(data[0] == 1) // Left
     {
         Motor_SetDirection(0);
         SetRPM(90);
     }
-    else if(data[1] == 1)
+    else if(data[1] == 1) // Forward
     {
         Motor_SetDirection(1);
         SetRPM(90);
     }
-    else if(data[2] == 1)
+    else if(data[2] == 1) // Right
     {
         Motor_SetDirection(1);
         SetRPM(90);
     }
-    else if(data[3] == 1)
+    else if(data[3] == 1) // Back
     {
         Motor_SetDirection(0);
         SetRPM(90);
