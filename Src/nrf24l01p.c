@@ -187,6 +187,7 @@ void nrf24TxMode(uint8_t* address, uint8_t channel)
 uint8_t transmitData(uint8_t* data)
 {
     uint8_t sendCmd = 0;
+    
     cs_low();
 
     // Payload cmd
@@ -207,7 +208,8 @@ uint8_t transmitData(uint8_t* data)
     {
         sendCmd = NRF24L01P_CMD_FLUSH_TX;
         nrfSendCmd(sendCmd);
-        nrf24Reset(NRF24L01P_REG_FIFO_STATUS);
+        nrf24Reset(NRF24L01P_REG_STATUS);
+        writeReg(NRF24L01P_REG_STATUS, readReg(NRF24L01P_REG_STATUS) | (1 << 5));
         return 1;
     }
 

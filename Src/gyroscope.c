@@ -1,10 +1,184 @@
 #include <stm32f0xx_hal.h>
 #include <assert.h>
 #include <main.h>
+#include <nrf24l01p.h>
+
+uint8_t txData[NRF24L01P_PAYLOAD_LENGTH] = "worl";
+
 int gyroscope (void) 
 {
-    // Set up a configuration struct to pass to the initialization function
-    GPIO_InitTypeDef initStr = {GPIO_PIN_6 | GPIO_PIN_7 | GPIO_PIN_8 | GPIO_PIN_9,
+    // Set up the global x and y.
+    int x = 0;
+    int y = 0;
+    int xleftovers = 0;
+    int yleftovers = 0;
+
+    while(1)
+    {
+        // Read the four registers of x and y from the gyroscope.
+        uint8_t xh = read(0x29);
+        uint8_t xl = read(0x28);
+        uint8_t yh = read(0x2b);
+        uint8_t yl = read(0x2a);
+
+        txData[0] = 0;
+        txData[1] = 0;
+        txData[2] = 0;
+        txData[3] = 0;
+
+        // Update the global x and y based on the read values.
+        (xh | 0x80) << 56;
+        (xh | 0x7f) << 8;
+        volatile int16_t xGyro = (xh << 8) | xl;
+        volatile int16_t yGyro = (yh << 8) | yl;
+        if(xGyro > -200 && xGyro < 200)
+            xGyro = 0;
+        if(yGyro > -200 && yGyro < 200)
+            yGyro = 0;
+
+        int xGyroAndLeftovers = xGyro + xleftovers;
+        int yGyroAndLeftovers = yGyro + yleftovers;
+
+        xleftovers = xGyroAndLeftovers % 5000;
+        yleftovers = yGyroAndLeftovers % 5000;
+
+        int xReduced = xGyroAndLeftovers / 5000;
+        int yReduced = yGyroAndLeftovers / 5000;
+        x += xReduced;
+        y += yReduced;
+
+        // Update the LEDs based on the new x and y.
+        if(x >= 500)
+        {
+            My_GPIO_WritePin(GPIOC, GPIO_PIN_9, 1);
+            My_GPIO_WritePin(GPIOC, GPIO_PIN_8, 0);
+            
+        }
+        else if(x < 500 && x > -500)
+        {
+            My_GPIO_WritePin(GPIOC, GPIO_PIN_9, 0);
+            My_GPIO_WritePin(GPIOC, GPIO_PIN_8, 0);
+        }
+        else
+        {
+            My_GPIO_WritePin(GPIOC, GPIO_PIN_8, 1);
+            My_GPIO_WritePin(GPIOC, GPIO_PIN_9, 0);
+        }
+
+        if(y >= 500)
+        {
+            My_GPIO_WritePin(GPIOC, GPIO_PIN_6, 1);
+            My_GPIO_WritePin(GPIOC, GPIO_PIN_7, 0);
+        }
+        else if(y < 500 && y > -500)
+        {
+            My_GPIO_WritePin(GPIOC, GPIO_PIN_7, 0);
+            My_GPIO_WritePin(GPIOC, GPIO_PIN_6, 0);
+        }
+        else
+        {
+            My_GPIO_WritePin(GPIOC, GPIO_PIN_7, 1);
+            My_GPIO_WritePin(GPIOC, GPIO_PIN_6, 0);
+        }
+
+        if(transmitData(txData) == 1)
+        {
+            HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_9);
+            HAL_Delay(1400);
+        }
+        else
+        {
+            HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_8); 
+        }
+
+        // Wait 100 ms
+        // HAL_Delay(10);
+    }
+}
+
+void write(char data)
+{
+    // Wait until either the TXIS or NACKF bit is set
+    while(!((I2C2->ISR & (1 << 1)) || (I2C2->ISR & (1 << 4))))
+    {}
+
+    // If the NACKF bit is set, there is a problem.  Turn on the orange LED.
+    if(I2C2->ISR & (1 << 4))
+    {
+        My_GPIO_TogglePin(GPIOC, GPIO_PIN_6 | GPIO_PIN_7 | GPIO_PIN_8 | GPIO_PIN_9);
+        return;
+    }
+
+    I2C2->TXDR = data;
+}
+
+int8_t read(char reg)
+{
+    // Write //////////////////////////////////////////////////////////////////////////////
+    // Set the transaction parameters in the CR2 register
+    // Set the L3GD20 slave address 110101
+    I2C2->CR2 = 0x69 << 1;
+    I2C2->CR2 &= ~((0x7F << 16));
+    I2C2->CR2 |= (1 << 16);
+    I2C2->CR2 &= ~(1 << 10);
+    I2C2->CR2 |= (1 << 13);
+
+    // Wait until either the TXIS or NACKF bit is set
+    while((!(I2C2->ISR & (1 << 1)) & !(I2C2->ISR & (1 << 4))))
+    {}
+    
+    // If the NACKF bit is set, there is probably a problem.  Turn on the Red LED.
+    if(I2C2->ISR & (1 << 4))
+    {
+        My_GPIO_WritePin(GPIOC, GPIO_PIN_6);
+        My_GPIO_WritePin(GPIOC, GPIO_PIN_7);
+        My_GPIO_WritePin(GPIOC, GPIO_PIN_8);
+        My_GPIO_WritePin(GPIOC, GPIO_PIN_9);
+        return;
+    }
+
+    // Write the address of the WHO_AM_I register into the I2C transmit register
+    I2C2->TXDR = reg;
+
+    // Wait until the Transfer Complete flag is set
+    while(!(I2C2->ISR & (1 << 6)))
+    {}
+
+    // Read ///////////////////////////////////////////////////////////////////////////////
+    // Reload the CR2 register with the same bits as before, but use read instead of write.
+    I2C2->CR2 = 0x69 << 1;
+    I2C2->CR2 |= (1 << 16);
+    I2C2->CR2 &= ~((0x7F << 17));
+    I2C2->CR2 |= (1 << 10);
+    I2C2->CR2 |= (1 << 13);
+
+    // Wait until either the RXNE or NACKF bit is set
+    while(!((I2C2->ISR & (1 << 2)) || (I2C2->ISR & (1 << 4))))
+    {}
+
+    // If the NACKF bit is set, there is a problem.  Turn on all the LEDs
+    if(I2C2->ISR & (1 << 4))
+    {
+        My_GPIO_WritePin(GPIOC, GPIO_PIN_6);
+        My_GPIO_WritePin(GPIOC, GPIO_PIN_7);
+        My_GPIO_WritePin(GPIOC, GPIO_PIN_8);
+        My_GPIO_WritePin(GPIOC, GPIO_PIN_9);
+        return;
+    }
+
+    int8_t result = I2C2->RXDR;
+
+    // Wait until the Transfer Complete flag is set
+    while(!(I2C2->ISR & (1 << 6)))
+    {}
+
+    return result;
+}
+
+void gyroInit(void)
+{
+// Set up a configuration struct to pass to the initialization function
+GPIO_InitTypeDef initStr = {GPIO_PIN_6 | GPIO_PIN_7 | GPIO_PIN_8 | GPIO_PIN_9,
     GPIO_MODE_OUTPUT_PP,
     GPIO_SPEED_FREQ_LOW,
     GPIO_NOPULL};
@@ -163,158 +337,8 @@ int gyroscope (void)
 
     write(0x20);
     write(0xb);
-    // Wait until the Transfer Complete flag is set
-    while(!(I2C2->ISR & (1 << 6)))
-    {}
-
-    // Set up the global x and y.
-    int x = 0;
-    int y = 0;
-    int xleftovers = 0;
-    int yleftovers = 0;
-
-    while(1)
-    {
-        // Read the four registers of x and y from the gyroscope.
-        uint8_t xh = read(0x29);
-        uint8_t xl = read(0x28);
-        uint8_t yh = read(0x2b);
-        uint8_t yl = read(0x2a);
-
-        // Update the global x and y based on the read values.
-        (xh | 0x80) << 56;
-        (xh | 0x7f) << 8;
-        volatile int16_t xGyro = (xh << 8) | xl;
-        volatile int16_t yGyro = (yh << 8) | yl;
-        if(xGyro > -200 && xGyro < 200)
-            xGyro = 0;
-        if(yGyro > -200 && yGyro < 200)
-            yGyro = 0;
-
-        int xGyroAndLeftovers = xGyro + xleftovers;
-        int yGyroAndLeftovers = yGyro + yleftovers;
-
-        xleftovers = xGyroAndLeftovers % 5000;
-        yleftovers = yGyroAndLeftovers % 5000;
-
-        int xReduced = xGyroAndLeftovers / 5000;
-        int yReduced = yGyroAndLeftovers / 5000;
-        x += xReduced;
-        y += yReduced;
-
-        // Update the LEDs based on the new x and y.
-        if(x >= 500)
-        {
-            My_GPIO_WritePin(GPIOC, GPIO_PIN_9, 1);
-            My_GPIO_WritePin(GPIOC, GPIO_PIN_8, 0);
-        }
-        else if(x < 500 && x > -500)
-        {
-            My_GPIO_WritePin(GPIOC, GPIO_PIN_9, 0);
-            My_GPIO_WritePin(GPIOC, GPIO_PIN_8, 0);
-        }
-        else
-        {
-            My_GPIO_WritePin(GPIOC, GPIO_PIN_8, 1);
-            My_GPIO_WritePin(GPIOC, GPIO_PIN_9, 0);
-        }
-
-        if(y >= 500)
-        {
-            My_GPIO_WritePin(GPIOC, GPIO_PIN_6, 1);
-            My_GPIO_WritePin(GPIOC, GPIO_PIN_7, 0);
-        }
-        else if(y < 500 && y > -500)
-        {
-            My_GPIO_WritePin(GPIOC, GPIO_PIN_7, 0);
-            My_GPIO_WritePin(GPIOC, GPIO_PIN_6, 0);
-        }
-        else
-        {
-            My_GPIO_WritePin(GPIOC, GPIO_PIN_7, 1);
-            My_GPIO_WritePin(GPIOC, GPIO_PIN_6, 0);
-        }
-
-        // Wait 100 ms
-        // HAL_Delay(10);
-    }
-}
-
-void write(char data)
-{
-    // Wait until either the TXIS or NACKF bit is set
-    while(!((I2C2->ISR & (1 << 1)) || (I2C2->ISR & (1 << 4))))
-    {}
-
-    // If the NACKF bit is set, there is a problem.  Turn on the orange LED.
-    if(I2C2->ISR & (1 << 4))
-    {
-        My_GPIO_TogglePin(GPIOC, GPIO_PIN_6 | GPIO_PIN_7 | GPIO_PIN_8 | GPIO_PIN_9);
-        return;
-    }
-
-    I2C2->TXDR = data;
-}
-
-int8_t read(char reg)
-{
-    // Write //////////////////////////////////////////////////////////////////////////////
-    // Set the transaction parameters in the CR2 register
-    // Set the L3GD20 slave address 110101
-    I2C2->CR2 = 0x69 << 1;
-    I2C2->CR2 &= ~((0x7F << 16));
-    I2C2->CR2 |= (1 << 16);
-    I2C2->CR2 &= ~(1 << 10);
-    I2C2->CR2 |= (1 << 13);
-
-    // Wait until either the TXIS or NACKF bit is set
-    while((!(I2C2->ISR & (1 << 1)) & !(I2C2->ISR & (1 << 4))))
-    {}
-    
-    // If the NACKF bit is set, there is probably a problem.  Turn on the Red LED.
-    if(I2C2->ISR & (1 << 4))
-    {
-        My_GPIO_WritePin(GPIOC, GPIO_PIN_6);
-        My_GPIO_WritePin(GPIOC, GPIO_PIN_7);
-        My_GPIO_WritePin(GPIOC, GPIO_PIN_8);
-        My_GPIO_WritePin(GPIOC, GPIO_PIN_9);
-        return;
-    }
-
-    // Write the address of the WHO_AM_I register into the I2C transmit register
-    I2C2->TXDR = reg;
 
     // Wait until the Transfer Complete flag is set
     while(!(I2C2->ISR & (1 << 6)))
     {}
-
-    // Read ///////////////////////////////////////////////////////////////////////////////
-    // Reload the CR2 register with the same bits as before, but use read instead of write.
-    I2C2->CR2 = 0x69 << 1;
-    I2C2->CR2 |= (1 << 16);
-    I2C2->CR2 &= ~((0x7F << 17));
-    I2C2->CR2 |= (1 << 10);
-    I2C2->CR2 |= (1 << 13);
-
-    // Wait until either the RXNE or NACKF bit is set
-    while(!((I2C2->ISR & (1 << 2)) || (I2C2->ISR & (1 << 4))))
-    {}
-
-    // If the NACKF bit is set, there is a problem.  Turn on all the LEDs
-    if(I2C2->ISR & (1 << 4))
-    {
-        My_GPIO_WritePin(GPIOC, GPIO_PIN_6);
-        My_GPIO_WritePin(GPIOC, GPIO_PIN_7);
-        My_GPIO_WritePin(GPIOC, GPIO_PIN_8);
-        My_GPIO_WritePin(GPIOC, GPIO_PIN_9);
-        return;
-    }
-
-    int8_t result = I2C2->RXDR;
-
-    // Wait until the Transfer Complete flag is set
-    while(!(I2C2->ISR & (1 << 6)))
-    {}
-
-    return result;
 }
