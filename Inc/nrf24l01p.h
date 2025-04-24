@@ -11,10 +11,8 @@
 #ifndef __NRF24L01P_H__
 #define __NRF24L01P_H__
 
-
 #include "spi.h"    // header from stm32cubemx code generate
 #include <stdbool.h>
-
 
 /* User Configurations */
 #define NRF24L01P_SPI                     (&hspi1)
@@ -53,8 +51,32 @@ typedef enum
     _18dBm = 0
 } output_power;
 
+
+// My functions //////////////////////////////////////////////
 void setupSPI();
 void irq_pin_init(void);
+
+void nrf24Init();
+
+void nrf24TxMode(uint8_t* address, uint8_t channel);
+uint8_t transmitData(uint8_t* data);
+
+void writeReg(uint8_t reg, uint8_t data);
+void writeRegMulti(uint8_t reg, uint8_t* data, int size);
+
+uint8_t readReg(uint8_t reg);
+void readRegMulti(uint8_t reg, uint8_t* data, int size);
+
+void nrfSendCmd(uint8_t cmd);
+
+void nrfRxMode(uint8_t* address, uint8_t channel);
+uint8_t isDataAvailable(int pipenum);
+void receiveData(uint8_t* data);
+
+
+
+
+// My functions end ////////////////////////////////////////
 
 /* Main Functions */
 void nrf24l01p_rx_init(channel MHz, air_data_rate bps);
@@ -104,17 +126,22 @@ void nrf24l01p_auto_retransmit_delay(delay us);
 
 
 /* nRF24L01+ Commands */
-#define NRF24L01P_CMD_R_REGISTER                  0b00000000
-#define NRF24L01P_CMD_W_REGISTER                  0b00100000
-#define NRF24L01P_CMD_R_RX_PAYLOAD                0b01100001
-#define NRF24L01P_CMD_W_TX_PAYLOAD                0b10100000
-#define NRF24L01P_CMD_FLUSH_TX                    0b11100001
-#define NRF24L01P_CMD_FLUSH_RX                    0b11100010
-#define NRF24L01P_CMD_REUSE_TX_PL                 0b11100011
-#define NRF24L01P_CMD_R_RX_PL_WID                 0b01100000
-#define NRF24L01P_CMD_W_ACK_PAYLOAD               0b10101000
-#define NRF24L01P_CMD_W_TX_PAYLOAD_NOACK          0b10110000
-#define NRF24L01P_CMD_NOP                         0b11111111    
+#define NRF24L01P_CMD_R_REGISTER                  0x00
+#define NRF24L01P_CMD_W_REGISTER                  0x20
+#define NRF24L01P_CMD_REGISTER_MASK               0x1F
+#define NRF24L01P_CMD_ACTIVATE                    0x50
+#define NRF24L01P_CMD_R_RX_PL_WID                 0x60
+#define NRF24L01P_CMD_R_RX_PAYLOAD                0x61
+#define NRF24L01P_CMD_W_TX_PAYLOAD                0xA0
+#define NRF24L01P_CMD_W_ACK_PAYLOAD               0xA8
+#define NRF24L01P_CMD_FLUSH_TX                    0xE1
+#define NRF24L01P_CMD_FLUSH_RX                    0xE2
+#define NRF24L01P_CMD_REUSE_TX_PL                 0xE3
+#define NRF24L01P_CMD_NOP                         0xFF   
+
+// Not used?
+#define NRF24L01P_CMD_W_TX_PAYLOAD_NOACK          0xB0
+
 
 /* nRF24L01+ Registers */
 #define NRF24L01P_REG_CONFIG            0x00

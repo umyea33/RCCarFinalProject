@@ -10,8 +10,10 @@
 void Error_Handler(void)
 {
   /* User may add here some code to deal with this error */
+  __disable_irq();
   while(1)
   {
+      HAL_GPIO_WritePin(GPIOC, GPIO_PIN_6, GPIO_PIN_SET);
   }
 }
 
