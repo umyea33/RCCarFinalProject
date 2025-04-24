@@ -38,7 +38,7 @@ void setupSPI()
         GPIO_PIN_6 | GPIO_PIN_7 | GPIO_PIN_8,
         GPIO_MODE_OUTPUT_PP,
         GPIO_SPEED_FREQ_HIGH,
-        GPIO_NOPULL
+        GPIO_PULLUP
     };
 
     GPIO_InitTypeDef initBTransceiverAF = 
@@ -70,20 +70,6 @@ void setupSPI()
     SPI1->CR2 &= ~SPI_CR2_FRF;
     SPI1->CR1 |= SPI_CR1_SPE;
     MX_SPI1_Init();
-}
-
-void irq_pin_init(void)
-{
-    GPIO_InitTypeDef GPIO_InitStruct = {0};
-    __HAL_RCC_GPIOB_CLK_ENABLE();
-
-    GPIO_InitStruct.Pin = NRF24L01P_IRQ_PIN_NUMBER;
-    GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING; // IRQ is active LOW
-    GPIO_InitStruct.Pull = GPIO_NOPULL;
-    HAL_GPIO_Init(NRF24L01P_IRQ_PIN_PORT, &GPIO_InitStruct);
-
-    HAL_NVIC_SetPriority(EXTI4_15_IRQn, 1, 0);
-    HAL_NVIC_EnableIRQ(EXTI4_15_IRQn);
 }
 
 void writeReg(uint8_t reg, uint8_t data)
@@ -161,7 +147,7 @@ void nrf24Init()
 
     writeReg(NRF24L01P_REG_EN_AA, 0); // No auto acknowledge
 
-    writeReg(NRF24L01P_REG_EN_RXADDR, 0); // Not enabling any data pipe right now
+    writeReg(NRF24L01P_REG_EN_RXADDR, (1 << 1)); // Not enabling any data pipe right now
 
     writeReg(NRF24L01P_REG_SETUP_AW, 3); // 5 bytes for tx/rx address
 
@@ -169,7 +155,10 @@ void nrf24Init()
 
     writeReg(NRF24L01P_REG_RF_CH, 0); // will set up during tx or rx
     
-    writeReg(NRF24L01P_REG_RF_SETUP, 0x0E); // Power = 0db, data rate = 2Mbps
+    uint8_t new_rf_setup = readReg(NRF24L01P_REG_RF_SETUP) & 0xD7;
+    new_rf_setup |= (1 << 5) | (1 << 2) | (1 << 1); 
+
+    writeReg(NRF24L01P_REG_RF_SETUP, new_rf_setup); // Power = 0db, data rate = 250kbps
 
     // Re-enable the device.
     ce_high();
@@ -205,7 +194,7 @@ uint8_t transmitData(uint8_t* data)
     HAL_SPI_Transmit(NRF24L01P_SPI, &sendCmd, 1, 100);
 
     // Send payload
-    HAL_SPI_Transmit(NRF24L01P_SPI, data, 32, 1000);
+    HAL_SPI_Transmit(NRF24L01P_SPI, data, NRF24L01P_PAYLOAD_LENGTH, 1000);
 
     // Unselect the device
     cs_high();
@@ -239,9 +228,9 @@ void nrfRxMode(uint8_t* address, uint8_t channel)
     uint8_t pipe = readReg(NRF24L01P_REG_EN_RXADDR) | (1 << 1);
     writeReg(NRF24L01P_REG_EN_RXADDR, pipe);
 
-    writeRegMulti(NRF24L01P_REG_RX_ADDR_P1, address, 5); // Write the tx address.
+    writeRegMulti(NRF24L01P_REG_RX_ADDR_P1, address, 5); // Write the rx address.
 
-    writeReg(NRF24L01P_REG_RX_PW_P1, 32); // 32 bit payload for pipe 1.
+    writeReg(NRF24L01P_REG_RX_PW_P1, NRF24L01P_PAYLOAD_LENGTH); // # of bit payload for pipe 1.
 
     uint8_t newConfig = readReg(NRF24L01P_REG_CONFIG) | (1 << 1) | (1 << 0);
     writeReg(NRF24L01P_REG_CONFIG, newConfig);
@@ -272,7 +261,7 @@ void receiveData(uint8_t* data)
     HAL_SPI_Transmit(NRF24L01P_SPI, &sendCmd, 1, 100);
 
     // Send payload
-    HAL_SPI_Receive(NRF24L01P_SPI, data, 4, 1000);
+    HAL_SPI_Receive(NRF24L01P_SPI, data, NRF24L01P_PAYLOAD_LENGTH, 1000);
 
     // Unselect the device
     cs_high();
@@ -281,25 +270,6 @@ void receiveData(uint8_t* data)
 
     sendCmd = NRF24L01P_CMD_FLUSH_RX;
     nrfSendCmd(sendCmd);
-}
-
-void nrf24ReadAll(uint8_t* data)
-{
-    for(int i = 0; i < 10; i++)
-        *(data + i) = readReg(i);
-
-    readRegMulti(NRF24L01P_REG_RX_ADDR_P0, (data + 10), 5);
-    readRegMulti(NRF24L01P_REG_RX_ADDR_P1, (data + 15), 5);
-
-    *(data + 20) = readReg(NRF24L01P_REG_RX_ADDR_P2);
-    *(data + 21) = readReg(NRF24L01P_REG_RX_ADDR_P3);
-    *(data + 22) = readReg(NRF24L01P_REG_RX_ADDR_P4);
-    *(data + 23) = readReg(NRF24L01P_REG_RX_ADDR_P5);
-
-    readRegMulti(NRF24L01P_REG_RX_ADDR_P0, (data + 24), 5);
-
-    for(int i = 29; i < 38; i++)
-        *(data + i) = readReg(i - 12);
 }
 
 void nrf24Reset(uint8_t reg)

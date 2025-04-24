@@ -4,8 +4,8 @@
 
 
 // data array to be sent
-uint8_t txData[] = "Hello World\n";
-uint8_t txAddress[] = {0xEE, 0xDD, 0xCC, 0xBB, 0xAA};
+uint8_t txData[NRF24L01P_PAYLOAD_LENGTH] = "worl";
+uint8_t txAddress[] = {0xEE, 0xEE, 0xEE, 0xEE, 0xEE};
 
 int sender(void)
 {
@@ -29,12 +29,10 @@ int sender(void)
 
     nrf24Init();
     nrf24TxMode(txAddress, 10);
-    // txData[0] = 'L';
-    // txData[1] = 150;
-    // txData[2] = 'F';
-    // txData[3] = 50;
+
     while (1)
     {   
+        HAL_Delay(750);
         if(transmitData(txData) == 1)
         {
             HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_9);
