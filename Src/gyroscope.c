@@ -14,14 +14,22 @@ int gyroscope (void)
     int y = 0;
     int xleftovers = 0;
     int yleftovers = 0;
+    uint8_t xh = 0;
+    uint8_t xl = 0;
+    uint8_t yh = 0;
+    uint8_t yl = 0;
+    char turn = 'n';
+    char motion = 'n';
+    uint32_t sendInterval = 5000;
+    uint32_t lastSend = HAL_GetTick();
 
     while(1)
     {
         // Read the four registers of x and y from the gyroscope.
-        uint8_t xh = read(0x29);
-        uint8_t xl = read(0x28);
-        uint8_t yh = read(0x2b);
-        uint8_t yl = read(0x2a);
+        xh = read(0x29);
+        xl = read(0x28);
+        yh = read(0x2b);
+        yl = read(0x2a);
 
         txData[0] = 0;
         txData[1] = 0;
@@ -50,49 +58,80 @@ int gyroscope (void)
         y += yReduced;
 
         // Update the LEDs based on the new x and y.
-        if(x >= 500)
+        if(x >= 1000)
         {
-            txData[2] = 1;
+            motion = 'b';
+            // txData[2] = 1;
             My_GPIO_WritePin(GPIOC, GPIO_PIN_9, 1);
             My_GPIO_WritePin(GPIOC, GPIO_PIN_8, 0);
             
         }
-        else if(x < 500 && x > -500)
+        else if(x < 1000 && x > -1000)
         {
+            motion = 'n';
             My_GPIO_WritePin(GPIOC, GPIO_PIN_9, 0);
             My_GPIO_WritePin(GPIOC, GPIO_PIN_8, 0);
         }
         else
         {
-            txData[0] = 1;
+            motion = 'f';
+            // txData[0] = 1;
             My_GPIO_WritePin(GPIOC, GPIO_PIN_8, 1);
             My_GPIO_WritePin(GPIOC, GPIO_PIN_9, 0);
         }
 
-        if(y >= 500)
+        if(y >= 1000)
         {
-            txData[1] = 1;
+            turn = 'l';
+            // txData[1] = 1;
             My_GPIO_WritePin(GPIOC, GPIO_PIN_6, 1);
             My_GPIO_WritePin(GPIOC, GPIO_PIN_7, 0);
         }
-        else if(y < 500 && y > -500)
+        else if(y < 1000 && y > -1000)
         {
+            turn = 'n';
             My_GPIO_WritePin(GPIOC, GPIO_PIN_7, 0);
             My_GPIO_WritePin(GPIOC, GPIO_PIN_6, 0);
         }
         else
         {
-            txData[3] = 1;
+            turn = 'r';
+            // txData[3] = 1;
             My_GPIO_WritePin(GPIOC, GPIO_PIN_7, 1);
             My_GPIO_WritePin(GPIOC, GPIO_PIN_6, 0);
         }
 
-        if(transmitData(txData) == 1)
-            HAL_Delay(1400);
-
-        // Wait 100 ms
-        // HAL_Delay(10);
+        if(HAL_GetTick() - lastSend >= sendInterval)
+        {
+            HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_6);
+            lastSend = HAL_GetTick();
+            fillTxData(turn, motion);
+            if(transmitData(txData) == 1)
+                HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_7 | GPIO_PIN_9);
+            else 
+            {
+                HAL_GPIO_WritePin(GPIOC, GPIO_PIN_6 | GPIO_PIN_7, 1);
+            }
+        }
     }
+}
+
+void fillTxData(char turn, char motion)
+{
+    char toTransmit = 'n';
+    if(turn == 'l')
+        toTransmit = 'l';
+    else if(turn == 'r')
+        toTransmit = 'r';
+    else if(motion == 'f')
+        toTransmit = 'f';
+    else if(motion == 'b')
+        toTransmit = 'b';
+
+    txData[0] = toTransmit;
+    txData[1] = toTransmit;
+    txData[2] = toTransmit;
+    txData[3] = toTransmit;
 }
 
 void write(char data)
@@ -189,17 +228,17 @@ void gyroInit(void)
     RCC->AHBENR |= 1 << 18;
 
     // My_GPIO_WritePin(GPIOC, GPIO_PIN_7);
-    My_GPIO_WritePin(GPIOC, GPIO_PIN_6, 1);
-    My_GPIO_WritePin(GPIOC, GPIO_PIN_7, 1);
-    My_GPIO_WritePin(GPIOC, GPIO_PIN_8, 1);
-    My_GPIO_WritePin(GPIOC, GPIO_PIN_9, 1);
+    // My_GPIO_WritePin(GPIOC, GPIO_PIN_6, 1);
+    // My_GPIO_WritePin(GPIOC, GPIO_PIN_7, 1);
+    // My_GPIO_WritePin(GPIOC, GPIO_PIN_8, 1);
+    // My_GPIO_WritePin(GPIOC, GPIO_PIN_9, 1);
 
-    HAL_Delay(1000);
+    // HAL_Delay(1000);
     
-    My_GPIO_WritePin(GPIOC, GPIO_PIN_6, 0);
-    My_GPIO_WritePin(GPIOC, GPIO_PIN_7, 0);
-    My_GPIO_WritePin(GPIOC, GPIO_PIN_8, 0);
-    My_GPIO_WritePin(GPIOC, GPIO_PIN_9, 0);
+    // My_GPIO_WritePin(GPIOC, GPIO_PIN_6, 0);
+    // My_GPIO_WritePin(GPIOC, GPIO_PIN_7, 0);
+    // My_GPIO_WritePin(GPIOC, GPIO_PIN_8, 0);
+    // My_GPIO_WritePin(GPIOC, GPIO_PIN_9, 0);
 
     // if((RCC->AHBENR & 1 << 19) && (RCC->AHBENR & 1 << 18))
     //     My_GPIO_TogglePin(GPIOC, GPIO_PIN_7);

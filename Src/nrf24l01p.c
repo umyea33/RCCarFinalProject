@@ -209,7 +209,7 @@ uint8_t transmitData(uint8_t* data)
         sendCmd = NRF24L01P_CMD_FLUSH_TX;
         nrfSendCmd(sendCmd);
         nrf24Reset(NRF24L01P_REG_STATUS);
-        writeReg(NRF24L01P_REG_STATUS, readReg(NRF24L01P_REG_STATUS) | (1 << 5));
+        // writeReg(NRF24L01P_REG_STATUS, readReg(NRF24L01P_REG_STATUS) | (1 << 5));
         return 1;
     }
 
