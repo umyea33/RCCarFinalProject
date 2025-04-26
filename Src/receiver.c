@@ -9,7 +9,7 @@ uint8_t rxAddress[] = {0xEE, 0xEE, 0xEE, 0xEE, 0xEE};
 // M1 (Right) In1 is backwards In2 is forward
 // M2 (Left)  In4 is backwards In3 is forward
 // PC10 = ENA  PC11 = ENB
-// PC1 = In1, PC2 = In2, PC3 = In3, and PC4 = In4
+// PC8 = In1, PC9 = In2, PC3 = In3, and PC4 = In4
 
 int receiver(void)
 {
@@ -44,13 +44,14 @@ int receiver(void)
 
         // if(data < 20)
         //     HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_9);
-
+        HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_9);
+        // HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_7);
         if(isDataAvailable(1) == 1)
         {
             receiveData(rxData);
             processCommand(rxData[0]);
 
-            // HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_9);
+            HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_7);
         }
         else
         {

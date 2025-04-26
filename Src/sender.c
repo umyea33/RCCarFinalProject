@@ -35,12 +35,14 @@ int sender(void)
     //     if(transmitData(sendData) == 1)
     //     {
     //         HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_9);
-    //         HAL_Delay(5000);
     //     }
     //     else
     //     {
-    //         HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_8); 
+    //         HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_8);
+    //         // HAL_Delay(2000);
     //     }
+    //     HAL_Delay(1000);
+
     // }
     gyroscope();
     return 1;
